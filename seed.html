@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ใส่ข้อมูลตัวอย่างลง Firestore · LeaveEasy</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/data.js" defer></script>
+  <script type="module" src="js/seed.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>ใส่ข้อมูลตัวอย่างลง Firestore</h1>
+    <p class="subtitle">
+      หน้านี้เป็นเครื่องมือชั่วคราว ใช้ครั้งเดียวตอนตั้งค่าโปรเจกต์ (ดู SETUP.md) —
+      ไม่ใช่หนึ่งใน 5 หน้าจอหลักของระบบ และไม่อยู่ในเมนู
+    </p>
+
+    <div class="card">
+      <p>กดปุ่มนี้เพื่อใส่ข้อมูลตัวอย่างชุดเดียวกับ <code>js/data.js</code> ลง Firestore
+        (โฟลเดอร์ <code>users</code> · <code>leaveTypes</code> · <code>leaveRequests</code> พร้อมโฟลเดอร์ย่อย <code>approvals</code>)</p>
+      <p class="hint">กดซ้ำได้หลายครั้งโดยไม่เกิดข้อมูลซ้ำ เพราะใช้ชื่อไฟล์ตายตัวเดิมทุกครั้ง</p>
+      <div class="btn-row">
+        <button type="button" id="ปุ่มใส่ข้อมูล">ใส่ข้อมูลตัวอย่าง</button>
+      </div>
+      <pre id="กล่องล็อก" class="hint" style="white-space:pre-wrap; margin-top:14px;"></pre>
+    </div>
+  </div>
+</body>
+</html>
