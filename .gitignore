@@ -21,6 +21,19 @@ desktop.ini
 .idea/
 
 
+# ── ค่าลับและ config ที่ห้ามขึ้น GitHub ──
+# (Firebase Web API key ใน js/firebase-config.js ไม่เข้าข่ายนี้ — ดูหมายเหตุท้ายไฟล์)
+.env
+.env.*
+*serviceAccountKey*.json
+*firebase-adminsdk*.json
+*.pem
+*.key
+secrets/
+config.local.js
+openrouter-key.js
+
+
 # ─────────────────────────────────────────────────────────────
 # ✅ วิธีตรวจว่าใช้ได้จริง — ก่อน push ทุกครั้ง พิมพ์บอก Claude ว่า
 #
