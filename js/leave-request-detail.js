@@ -1,23 +1,30 @@
 // ─────────────────────────────────────────────────────────────
 // js/leave-request-detail.js — หน้าที่ 3 รายละเอียดใบลา
-// สัปดาห์ที่ 6 (ต้นสัปดาห์): อ่านจากข้อมูลปลอม และเปลี่ยนสถานะในหน่วยความจำ
+// สัปดาห์ที่ 7: อ่านใบลาจริงจาก Firestore · ลบใบลาจริง
 // ─────────────────────────────────────────────────────────────
 
-(function () {
+import { db } from "./firebase-config.js";
+import { doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+(async function () {
   var รหัสใบลา = ค่าจากURL("id");
   var กล่องใบลา = document.getElementById("กล่องใบลา");
   var กล่องความเห็น = document.getElementById("กล่องความเห็น");
 
-  // หาใบลาจากข้อมูลปลอม บวกกับใบที่เพิ่งยื่นในหน้าที่ 2
-  var ใบลาที่ยื่นใหม่ = JSON.parse(sessionStorage.getItem("ใบลาที่ยื่นใหม่") || "[]");
-  var ใบ = window.LEAVE_DATA.leaveRequests.concat(ใบลาที่ยื่นใหม่)
-    .find(function (x) { return x.id === รหัสใบลา; });
-
-  if (!ใบ) {
-    กล่องใบลา.innerHTML = "<p>ไม่พบใบขอลาที่ต้องการ — อาจถูกลบไปแล้ว หรือลิงก์ไม่ถูกต้อง</p>";
+  var ใบ;
+  try {
+    var สแนปช็อต = await getDoc(doc(db, "leaveRequests", รหัสใบลา));
+    if (!สแนปช็อต.exists()) {
+      กล่องใบลา.innerHTML = "<p>ไม่พบใบขอลาที่ต้องการ — อาจถูกลบไปแล้ว หรือลิงก์ไม่ถูกต้อง</p>";
+      return;
+    }
+    ใบ = Object.assign({ id: สแนปช็อต.id }, สแนปช็อต.data());
+  } catch (err) {
+    กล่องใบลา.innerHTML = "<p>ดึงข้อมูลจาก Firestore ไม่สำเร็จ: " + esc(err.message) + "</p>";
     return;
   }
 
+  // ความเห็น: ยังอ่านจากข้อมูลปลอม (เชื่อมโฟลเดอร์ย่อย approvals ของจริงเป็นงานถัดไป)
   var ความเห็น = window.LEAVE_DATA.approvals.filter(function (c) { return c.requestId === ใบ.id; });
 
   วาดใบลา();
@@ -43,15 +50,16 @@
       return '<div class="field-row"><span class="k">' + r[0] + "</span><span>" + r[1] + "</span></div>";
     }).join("");
 
-    // ปุ่มอนุมัติ / ไม่อนุมัติ ขึ้นเฉพาะใบที่ยังรอพิจารณา
+    // ปุ่มอนุมัติ / ไม่อนุมัติ / ลบ ขึ้นเฉพาะใบที่ยังรอพิจารณา
     if (ใบ.status === "รอพิจารณา") {
       html +=
         '<div class="btn-row">' +
         '<button type="button" class="btn-ok" id="ปุ่มอนุมัติ">อนุมัติ</button>' +
         '<button type="button" class="btn-danger" id="ปุ่มไม่อนุมัติ">ไม่อนุมัติ</button>' +
+        '<button type="button" class="btn-danger" id="ปุ่มลบ">ลบใบลานี้</button>' +
         "</div>";
     } else {
-      html += '<p class="hint">ใบนี้พิจารณาแล้ว จึงเปลี่ยนสถานะต่อไม่ได้</p>';
+      html += '<p class="hint">ใบนี้พิจารณาแล้ว จึงเปลี่ยนสถานะและลบต่อไม่ได้</p>';
     }
 
     กล่องใบลา.innerHTML = html;
@@ -59,6 +67,22 @@
     if (ใบ.status === "รอพิจารณา") {
       document.getElementById("ปุ่มอนุมัติ").addEventListener("click", function () { เปลี่ยนสถานะ("อนุมัติ"); });
       document.getElementById("ปุ่มไม่อนุมัติ").addEventListener("click", function () { เปลี่ยนสถานะ("ไม่อนุมัติ"); });
+      document.getElementById("ปุ่มลบ").addEventListener("click", ลบใบลา);
+    }
+  }
+
+  // ── ลบใบลานี้ (ลบได้เฉพาะใบที่ยังรอพิจารณา — ปุ่มถูกซ่อนไปแล้วถ้าไม่ใช่) ──
+  async function ลบใบลา() {
+    if (!confirm("ยืนยันลบใบขอลานี้? เมื่อลบแล้วจะกู้คืนไม่ได้")) return;
+
+    var ปุ่ม = document.getElementById("ปุ่มลบ");
+    ปุ่ม.disabled = true;
+    try {
+      await deleteDoc(doc(db, "leaveRequests", ใบ.id));
+      location.href = "leave-requests.html";
+    } catch (err) {
+      alert("ลบไม่สำเร็จ: " + err.message);
+      ปุ่ม.disabled = false;
     }
   }
 

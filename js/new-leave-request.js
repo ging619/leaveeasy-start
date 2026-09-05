@@ -1,13 +1,16 @@
 // ─────────────────────────────────────────────────────────────
 // js/new-leave-request.js — หน้าที่ 2 ยื่นใบลาใหม่
-// สัปดาห์ที่ 6 (ต้นสัปดาห์): เก็บไว้ในหน่วยความจำของเบราว์เซอร์เท่านั้น
-// ยังไม่บันทึกลงฐานข้อมูล (เป็นงานของสัปดาห์ที่ 7)
+// สัปดาห์ที่ 7: บันทึกลง Firestore จริง (collection "leaveRequests")
 // ─────────────────────────────────────────────────────────────
+
+import { db } from "./firebase-config.js";
+import { collection, addDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
 (function () {
   var ฟอร์ม = document.getElementById("ฟอร์มใบลา");
   var ช่องประเภท = document.getElementById("leaveTypeId");
   var กล่องเตือน = document.getElementById("ข้อความเตือน");
+  var ปุ่มบันทึก = document.getElementById("ปุ่มบันทึก");
 
   // เติมรายการเลื่อนลงด้วยประเภทการลาที่มีอยู่
   window.LEAVE_DATA.leaveTypes.forEach(function (ประเภท) {
@@ -17,7 +20,7 @@
     ช่องประเภท.appendChild(ตัวเลือก);
   });
 
-  ฟอร์ม.addEventListener("submit", function (e) {
+  ฟอร์ม.addEventListener("submit", async function (e) {
     e.preventDefault();
 
     var ค่า = {
@@ -40,9 +43,9 @@
 
     var ประเภท = window.LEAVE_DATA.leaveTypes.find(function (t) { return t.id === ค่า.leaveTypeId; });
 
-    // สัปดาห์ที่ 6 ยังไม่มีล็อกอิน จึงสมมติว่าผู้ขอลาคือ สมชาย ใจดี
+    // สัปดาห์ที่ 7 ยังไม่มีล็อกอิน จึงสมมติว่าผู้ขอลาคือ สมชาย ใจดี
+    // (จะเปลี่ยนเป็น uid ของผู้ใช้ที่ล็อกอินอยู่จริง ตอนเพิ่มระบบล็อกอิน)
     var ใบใหม่ = {
-      id: "lr-ใหม่-" + Date.now(),
       title: ค่า.title,
       reason: ค่า.reason,
       status: "รอพิจารณา",                       // ใบใหม่เริ่มที่ รอพิจารณา เสมอ
@@ -54,11 +57,14 @@
       createdAt: เวลาตอนนี้()
     };
 
-    var รายการ = JSON.parse(sessionStorage.getItem("ใบลาที่ยื่นใหม่") || "[]");
-    รายการ.push(ใบใหม่);
-    sessionStorage.setItem("ใบลาที่ยื่นใหม่", JSON.stringify(รายการ));
-
-    location.href = "leave-requests.html";
+    ปุ่มบันทึก.disabled = true;
+    try {
+      await addDoc(collection(db, "leaveRequests"), ใบใหม่);
+      location.href = "leave-requests.html";
+    } catch (err) {
+      เตือน("บันทึกไม่สำเร็จ: " + err.message);
+      ปุ่มบันทึก.disabled = false;
+    }
   });
 
   function เตือน(ข้อความ) {

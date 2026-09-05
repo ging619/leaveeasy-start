@@ -9,20 +9,16 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.18.0/
 (async function () {
   var กล่อง = document.getElementById("ผลลัพธ์");
 
-  var รายการจากฐานข้อมูล;
+  var ใบลาทั้งหมด;
   try {
     var สแนปช็อต = await getDocs(collection(db, "leaveRequests"));
-    รายการจากฐานข้อมูล = สแนปช็อต.docs.map(function (d) {
+    ใบลาทั้งหมด = สแนปช็อต.docs.map(function (d) {
       return Object.assign({ id: d.id }, d.data());
     });
   } catch (err) {
     กล่อง.innerHTML = "<p>ดึงข้อมูลจาก Firestore ไม่สำเร็จ: " + esc(err.message) + "</p>";
     return;
   }
-
-  // ใบที่เพิ่งยื่นในหน้าถัดไป (สัปดาห์นี้ยังไม่บันทึกลง Firestore จริง — เป็นงานสัปดาห์ที่ 7)
-  var ใบลาที่ยื่นใหม่ = JSON.parse(sessionStorage.getItem("ใบลาที่ยื่นใหม่") || "[]");
-  var ใบลาทั้งหมด = รายการจากฐานข้อมูล.concat(ใบลาที่ยื่นใหม่);
 
   // ถ้ามีสถานะติดมาท้าย URL ให้กรองเฉพาะสถานะนั้น
   var สถานะที่กรอง = ค่าจากURL("status");
