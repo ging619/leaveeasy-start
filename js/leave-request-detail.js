@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { db } from "./firebase-config.js";
-import { doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
 (async function () {
   var รหัสใบลา = ค่าจากURL("id");
@@ -86,15 +86,28 @@ import { doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18
     }
   }
 
-  // ── เปลี่ยนสถานะ (สัปดาห์นี้เปลี่ยนแค่ในหน่วยความจำ) ──
-  function เปลี่ยนสถานะ(สถานะใหม่) {
+  // ── เปลี่ยนสถานะ (บันทึกจริงลง Firestore แก้เฉพาะช่อง status) ──
+  async function เปลี่ยนสถานะ(สถานะใหม่) {
     // กฎ: จะไม่อนุมัติได้ ต้องมีความเห็นอย่างน้อย 1 รายการก่อน
     if (สถานะใหม่ === "ไม่อนุมัติ" && ความเห็น.length === 0) {
       alert("ต้องเขียนความเห็นอย่างน้อย 1 รายการก่อน จึงจะกดไม่อนุมัติได้");
       return;
     }
-    ใบ.status = สถานะใหม่;   // แก้เฉพาะช่อง status เท่านั้น
-    วาดใบลา();
+
+    document.getElementById("ปุ่มอนุมัติ").disabled = true;
+    document.getElementById("ปุ่มไม่อนุมัติ").disabled = true;
+    document.getElementById("ปุ่มลบ").disabled = true;
+
+    try {
+      await updateDoc(doc(db, "leaveRequests", ใบ.id), { status: สถานะใหม่ }); // แก้เฉพาะช่อง status เท่านั้น
+      ใบ.status = สถานะใหม่;
+      วาดใบลา();
+    } catch (err) {
+      alert("เปลี่ยนสถานะไม่สำเร็จ: " + err.message);
+      document.getElementById("ปุ่มอนุมัติ").disabled = false;
+      document.getElementById("ปุ่มไม่อนุมัติ").disabled = false;
+      document.getElementById("ปุ่มลบ").disabled = false;
+    }
   }
 
   // ── รายการความเห็น เรียงจากเก่าไปใหม่ ──
