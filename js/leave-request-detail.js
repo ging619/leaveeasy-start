@@ -3,13 +3,15 @@
 // สัปดาห์ที่ 7: อ่านใบลาจริงจาก Firestore · ลบใบลาจริง
 // ─────────────────────────────────────────────────────────────
 
-import { db } from "./firebase-config.js";
+import { db, auth } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
 import { doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
 (async function () {
   var รหัสใบลา = ค่าจากURL("id");
   var กล่องใบลา = document.getElementById("กล่องใบลา");
   var กล่องความเห็น = document.getElementById("กล่องความเห็น");
+  var บทบาทผู้ใช้ = "employee"; // ค่าเริ่มต้นปลอดภัยสุด ระหว่างยังไม่รู้ role จริง
 
   var ใบ;
   try {
@@ -22,6 +24,17 @@ import { doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/fireb
   } catch (err) {
     กล่องใบลา.innerHTML = "<p>ดึงข้อมูลจาก Firestore ไม่สำเร็จ: " + esc(err.message) + "</p>";
     return;
+  }
+
+  // ตาม ACL.md: ปุ่มอนุมัติ/ไม่อนุมัติ โชว์เฉพาะ manager/hr — รอให้รู้สถานะล็อกอินแน่นอนก่อนค่อยอ่าน role
+  var ผู้ใช้ปัจจุบัน = await new Promise(function (resolve) {
+    var เลิกฟัง = onAuthStateChanged(auth, function (user) { เลิกฟัง(); resolve(user); });
+  });
+  if (ผู้ใช้ปัจจุบัน) {
+    try {
+      var ผู้ใช้สแนปช็อต = await getDoc(doc(db, "users", ผู้ใช้ปัจจุบัน.uid));
+      if (ผู้ใช้สแนปช็อต.exists() && ผู้ใช้สแนปช็อต.data().role) บทบาทผู้ใช้ = ผู้ใช้สแนปช็อต.data().role;
+    } catch (err) { /* ใช้ค่าเริ่มต้น employee ถ้าอ่านไม่สำเร็จ (ปลอดภัยไว้ก่อน) */ }
   }
 
   // ความเห็น: ยังอ่านจากข้อมูลปลอม (เชื่อมโฟลเดอร์ย่อย approvals ของจริงเป็นงานถัดไป)
@@ -50,12 +63,19 @@ import { doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/fireb
       return '<div class="field-row"><span class="k">' + r[0] + "</span><span>" + r[1] + "</span></div>";
     }).join("");
 
-    // ปุ่มอนุมัติ / ไม่อนุมัติ / ลบ ขึ้นเฉพาะใบที่ยังรอพิจารณา
-    if (ใบ.status === "รอพิจารณา") {
+    // ปุ่มอนุมัติ/ไม่อนุมัติ ตาม ACL.md โชว์เฉพาะ manager/hr · ปุ่มลบยังโชว์ให้ทุกบทบาทเหมือนเดิม (กติกาการลบไม่ผูกกับ role)
+    var แสดงปุ่มอนุมัติ = ใบ.status === "รอพิจารณา" && (บทบาทผู้ใช้ === "manager" || บทบาทผู้ใช้ === "hr");
+
+    if (แสดงปุ่มอนุมัติ) {
       html +=
         '<div class="btn-row">' +
         '<button type="button" class="btn-ok" id="ปุ่มอนุมัติ">อนุมัติ</button>' +
         '<button type="button" class="btn-danger" id="ปุ่มไม่อนุมัติ">ไม่อนุมัติ</button>' +
+        '<button type="button" class="btn-danger" id="ปุ่มลบ">ลบใบลานี้</button>' +
+        "</div>";
+    } else if (ใบ.status === "รอพิจารณา") {
+      html +=
+        '<div class="btn-row">' +
         '<button type="button" class="btn-danger" id="ปุ่มลบ">ลบใบลานี้</button>' +
         "</div>";
     } else {
@@ -64,9 +84,11 @@ import { doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/fireb
 
     กล่องใบลา.innerHTML = html;
 
-    if (ใบ.status === "รอพิจารณา") {
+    if (แสดงปุ่มอนุมัติ) {
       document.getElementById("ปุ่มอนุมัติ").addEventListener("click", function () { เปลี่ยนสถานะ("อนุมัติ"); });
       document.getElementById("ปุ่มไม่อนุมัติ").addEventListener("click", function () { เปลี่ยนสถานะ("ไม่อนุมัติ"); });
+    }
+    if (ใบ.status === "รอพิจารณา") {
       document.getElementById("ปุ่มลบ").addEventListener("click", ลบใบลา);
     }
   }
