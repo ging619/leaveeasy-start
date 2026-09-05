@@ -3,8 +3,8 @@
 // สัปดาห์ที่ 7: บันทึกลง Firestore จริง (collection "leaveRequests")
 // ─────────────────────────────────────────────────────────────
 
-import { db } from "./firebase-config.js";
-import { collection, addDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { db, auth } from "./firebase-config.js";
+import { collection, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 
 (function () {
   var ฟอร์ม = document.getElementById("ฟอร์มใบลา");
@@ -43,13 +43,24 @@ import { collection, addDoc } from "https://www.gstatic.com/firebasejs/12.18.0/f
 
     var ประเภท = window.LEAVE_DATA.leaveTypes.find(function (t) { return t.id === ค่า.leaveTypeId; });
 
-    // สัปดาห์ที่ 7 ยังไม่มีล็อกอิน จึงสมมติว่าผู้ขอลาคือ สมชาย ใจดี
-    // (จะเปลี่ยนเป็น uid ของผู้ใช้ที่ล็อกอินอยู่จริง ตอนเพิ่มระบบล็อกอิน)
+    var ผู้ใช้ = auth.currentUser;
+    if (!ผู้ใช้) {
+      เตือน("ยังไม่ได้ล็อกอิน กรุณาเข้าสู่ระบบใหม่อีกครั้ง");
+      return;
+    }
+
+    // ชื่อผู้ขอลาอ่านจากโฟลเดอร์ users (ตรงตามโครงสร้างข้อมูลในสเปก)
+    var requesterName = ผู้ใช้.email;
+    try {
+      var ผู้ใช้สแนปช็อต = await getDoc(doc(db, "users", ผู้ใช้.uid));
+      if (ผู้ใช้สแนปช็อต.exists() && ผู้ใช้สแนปช็อต.data().name) requesterName = ผู้ใช้สแนปช็อต.data().name;
+    } catch (err) { /* ใช้อีเมลแทนถ้าอ่านชื่อไม่สำเร็จ */ }
+
     var ใบใหม่ = {
       title: ค่า.title,
       reason: ค่า.reason,
       status: "รอพิจารณา",                       // ใบใหม่เริ่มที่ รอพิจารณา เสมอ
-      requesterId: "u001", requesterName: "สมชาย ใจดี",
+      requesterId: ผู้ใช้.uid, requesterName: requesterName,
       approverId: "",      approverName: "",
       leaveTypeId: ประเภท.id, leaveTypeName: ประเภท.name,
       startDate: ค่า.startDate,
